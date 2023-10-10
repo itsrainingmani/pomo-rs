@@ -11,3 +11,4 @@ console = "0.15"
 indicatif = "0.17"
 color-eyre = { version = "0.6", default-features = false }
 bpaf = { version = "0.9.5", features = ["derive"] }
+tokio = { version = "1.33.0", features = ["time", "macros", "rt", "rt-multi-thread"] }
