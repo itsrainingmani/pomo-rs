@@ -5,7 +5,7 @@ use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
 
-use console::Term;
+use console::{style, Emoji, Style, Term};
 
 #[derive(Debug, Clone, Bpaf)]
 #[bpaf(options)]
@@ -38,19 +38,16 @@ impl Timer {
             Args::Time { time } => time,
         };
 
-        let time_sec: usize = 60 * time_min;
-        let current_time = 0;
-
         Timer {
             time_min,
-            time_sec,
-            current_time,
+            time_sec: 60 * time_min,
+            current_time: 0,
         }
     }
 }
 
 #[derive(Debug)]
-pub enum Command {
+pub enum UserInput {
     Cancel,
     Pause,
     Resume,
@@ -59,9 +56,17 @@ pub enum Command {
 fn main() -> Result<()> {
     color_eyre::install()?;
     let term = Term::stdout();
-    term.write_line("Welcome to Pomo-rs 🍅")?;
+    let tomato = Style::new().red().dim();
+    println!(
+        "{} {}",
+        tomato.apply_to("Welcome to Pomo-rs "),
+        Emoji("🍅", "")
+    );
     term.set_title("Pomodoro Timer");
-    term.write_line("| C -> Cancel | P -> Pause | R -> Resume |")?;
+    println!(
+        "{}",
+        tomato.apply_to("| C -> Cancel | P -> Pause | R -> Resume |"),
+    );
 
     let timer = Timer::new(args().run());
 
@@ -82,13 +87,13 @@ fn main() -> Result<()> {
         if let Ok(key) = term.read_key() {
             match key {
                 console::Key::Char('c') => {
-                    tx.send(Command::Cancel).unwrap();
+                    tx.send(UserInput::Cancel).unwrap();
                 }
                 console::Key::Char('p') => {
-                    tx.send(Command::Pause).unwrap();
+                    tx.send(UserInput::Pause).unwrap();
                 }
                 console::Key::Char('r') => {
-                    tx.send(Command::Resume).unwrap();
+                    tx.send(UserInput::Resume).unwrap();
                 }
                 _ => {}
             }
