@@ -1,4 +1,4 @@
-use clap::{ArgGroup, Parser};
+use bpaf::*;
 use color_eyre::eyre::Result;
 use indicatif::{self, ProgressBar};
 use std::sync::mpsc::{self};
@@ -7,21 +7,20 @@ use std::time::Duration;
 
 use console::Term;
 
-#[derive(Debug, Parser)]
-#[command(version, author, about, long_about = None, group = ArgGroup::new("duration").required(true))]
+#[derive(Debug, Clone, Bpaf)]
+#[bpaf(options)]
 /// An entirely Rust based Pomodoro timer
-pub struct Args {
+pub enum Args {
     /// 10 minutes
-    #[arg(short, long, group = "duration")]
-    long: bool,
+    Long,
 
     /// 5 minutes
-    #[arg(short, long, group = "duration")]
-    short: bool,
+    Short,
 
-    /// Specify your own time in minutes
-    #[arg(short, long, group = "duration")]
-    time: usize,
+    Time {
+        /// Specify your own time in minutes
+        time: usize,
+    },
 }
 
 #[derive(Debug)]
@@ -33,12 +32,10 @@ pub struct Timer {
 
 impl Timer {
     pub fn new(args: Args) -> Self {
-        let time_min = if args.long {
-            10
-        } else if args.short {
-            5
-        } else {
-            args.time
+        let time_min = match args {
+            Args::Long => 10,
+            Args::Short => 5,
+            Args::Time { time } => time,
         };
 
         let time_sec: usize = 60 * time_min;
@@ -66,7 +63,7 @@ fn main() -> Result<()> {
     term.set_title("Pomodoro Timer");
     term.write_line("| C -> Cancel | P -> Pause | R -> Resume |")?;
 
-    let timer = Timer::new(Args::parse());
+    let timer = Timer::new(args().run());
 
     // println!(
     //     "Pomodoro Time in min: {}; in seconds: {}; current time: {}",
