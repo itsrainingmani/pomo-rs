@@ -1,6 +1,7 @@
 use clap::{ArgGroup, Parser};
 use color_eyre::eyre::Result;
 use indicatif::{self, ProgressBar};
+use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
 
@@ -51,37 +52,70 @@ impl Timer {
     }
 }
 
+#[derive(Debug)]
+pub enum Command {
+    Cancel,
+    Pause,
+    Resume,
+}
+
 fn main() -> Result<()> {
     color_eyre::install()?;
     let term = Term::stdout();
     term.write_line("Welcome to Pomo-rs 🍅")?;
-
-    /*
-    TODO: Display KeyPress commands to the user. This should be permanently displayed
-    */
+    term.set_title("Pomodoro Timer");
+    term.write_line("| C -> Cancel | P -> Pause | R -> Resume |")?;
 
     let timer = Timer::new(Args::parse());
-    // println!("{:?}", timer);
 
     // println!(
     //     "Pomodoro Time in min: {}; in seconds: {}; current time: {}",
     //     config.time_min, config.time_sec, config.current_time
     // );
 
-    let pb = ProgressBar::new(timer.time_min as u64);
+    let pb = ProgressBar::new(timer.time_sec as u64);
     pb.set_style(
         indicatif::ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {wide_bar:.green/red} [{eta_precise}] {msg}")?,
+            .template("[{elapsed_precise}] {wide_bar:.green/red} [{eta_precise}]\n{msg}")?,
     );
 
-    // TODO: loop for processing commands by user
+    let (tx, rx) = mpsc::channel();
 
-    // Why loop per minute? maybe should loop per second?
-    for _ in 0..=timer.time_min {
-        thread::sleep(Duration::from_millis(1000));
-        pb.inc(1);
-    }
-    pb.finish_with_message("done");
+    thread::spawn(move || loop {
+        if let Ok(key) = term.read_key() {
+            match key {
+                console::Key::Char('c') => {
+                    tx.send(Command::Cancel).unwrap();
+                }
+                console::Key::Char('p') => {
+                    tx.send(Command::Pause).unwrap();
+                }
+                console::Key::Char('r') => {
+                    tx.send(Command::Resume).unwrap();
+                }
+                _ => {}
+            }
+        }
+    });
+
+    let handle = thread::spawn(move || {
+        for _ in 0..=timer.time_sec {
+            // try_recv doesnt block. handle a message if there is one
+            if let Ok(cmd) = rx.try_recv() {
+                match cmd {
+                    // Command::Pause => todo!(),
+                    // Command::Cancel => todo!(),
+                    // Command::Resume => todo!(),
+                    _ => println!("{:?}", cmd),
+                }
+            }
+            thread::sleep(Duration::from_millis(1000));
+            pb.inc(1);
+        }
+        pb.finish_with_message("🍅 squashed!");
+    });
+
+    handle.join().unwrap();
 
     Ok(())
 }
