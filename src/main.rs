@@ -54,13 +54,13 @@ impl Timer {
 fn main() -> Result<()> {
     color_eyre::install()?;
     let term = Term::stdout();
-    term.write_line("Welcome to Pomo-rs")?;
+    term.write_line("Welcome to Pomo-rs 🍅")?;
 
     /*
     TODO: Display KeyPress commands to the user. This should be permanently displayed
     */
 
-    let mut timer = Timer::new(Args::parse());
+    let timer = Timer::new(Args::parse());
     // println!("{:?}", timer);
 
     // println!(
